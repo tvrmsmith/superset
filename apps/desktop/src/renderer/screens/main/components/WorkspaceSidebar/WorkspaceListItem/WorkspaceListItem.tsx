@@ -6,6 +6,7 @@ import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useCopyToClipboard } from "renderer/hooks/useCopyToClipboard";
+import { useWorkspaceShortcutModifiers } from "renderer/hooks/useWorkspaceShortcutModifiers";
 import { HotkeyLabel } from "renderer/hotkeys";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useHoverGitHubStatus } from "renderer/lib/githubQueryPolicy";
@@ -111,6 +112,9 @@ export function WorkspaceListItem({
 	);
 
 	const isModifierHeld = useModifierKeyStateStore((s) => s.isModifierHeld);
+	const { shortcutLabels } = useWorkspaceShortcutModifiers();
+	const shortcutLabel =
+		shortcutIndex !== undefined ? shortcutLabels.get(shortcutIndex) : undefined;
 	const showShortcutBadge =
 		isModifierHeld &&
 		shortcutIndex !== undefined &&
@@ -402,25 +406,24 @@ export function WorkspaceListItem({
 								/>
 							)}
 
-							<div className="grid shrink-0 h-5 [&>*]:col-start-1 [&>*]:row-start-1 items-center">
-								{diffStats && (
-									<WorkspaceDiffStats
-										additions={diffStats.additions}
-										deletions={diffStats.deletions}
-										isActive={isActive}
-										hidden={showShortcutBadge}
-									/>
-								)}
-								{showShortcutBadge ? (
-									<WorkspaceShortcutBadge label={String(shortcutIndex + 1)} />
-								) : (
+							{showShortcutBadge && shortcutLabel ? (
+								<WorkspaceShortcutBadge
+									label={shortcutLabel}
+									className="shrink-0"
+								/>
+							) : (
+								<div className="grid shrink-0 h-5 [&>*]:col-start-1 [&>*]:row-start-1 items-center">
+									{diffStats && (
+										<WorkspaceDiffStats
+											additions={diffStats.additions}
+											deletions={diffStats.deletions}
+											isActive={isActive}
+										/>
+									)}
 									<div className="flex items-center justify-end gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-[opacity,visibility]">
-										{shortcutIndex !== undefined &&
-											shortcutIndex < MAX_KEYBOARD_SHORTCUT_INDEX && (
-												<WorkspaceShortcutBadge
-													label={`⌘${shortcutIndex + 1}`}
-												/>
-											)}
+										{shortcutLabel && (
+											<WorkspaceShortcutBadge label={shortcutLabel} />
+										)}
 										{!isBranchWorkspace && (
 											<Tooltip delayDuration={300}>
 												<TooltipTrigger asChild>
@@ -445,8 +448,8 @@ export function WorkspaceListItem({
 											</Tooltip>
 										)}
 									</div>
-								)}
-							</div>
+								</div>
+							)}
 						</div>
 
 						{(showBranchSubtitle || pr) && (
