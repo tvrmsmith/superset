@@ -316,8 +316,7 @@ export function BehaviorSettings({ visibleItems }: BehaviorSettingsProps) {
 							checked={showWorkspaceNumbersOnModifier ?? false}
 							onCheckedChange={handleNumbersToggle}
 							disabled={
-								isNumbersLoading ||
-								setShowWorkspaceNumbersOnModifier.isPending
+								isNumbersLoading || setShowWorkspaceNumbersOnModifier.isPending
 							}
 						/>
 					</div>

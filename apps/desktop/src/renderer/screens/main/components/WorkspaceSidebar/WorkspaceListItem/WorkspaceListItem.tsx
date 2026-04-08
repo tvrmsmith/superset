@@ -412,9 +412,7 @@ export function WorkspaceListItem({
 									/>
 								)}
 								{showShortcutBadge ? (
-									<WorkspaceShortcutBadge
-										label={String(shortcutIndex + 1)}
-									/>
+									<WorkspaceShortcutBadge label={String(shortcutIndex + 1)} />
 								) : (
 									<div className="flex items-center justify-end gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-[opacity,visibility]">
 										{shortcutIndex !== undefined &&
