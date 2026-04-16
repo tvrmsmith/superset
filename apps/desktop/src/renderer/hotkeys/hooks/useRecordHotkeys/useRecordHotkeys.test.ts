@@ -110,6 +110,16 @@ describe("captureHotkeyFromEvent — Bug 2: uses event.code, not event.key", () 
 		expect(captureHotkeyFromEvent(ev({ code: "F12", key: "F12" }))).toBe("f12");
 	});
 
+	it("requires ctrl, meta, or alt (Mac) for non-F-keys", () => {
+		expect(
+			captureHotkeyFromEvent(ev({ code: "KeyA", key: "a", shiftKey: true })),
+		).toBeNull();
+		// On Mac (test runtime PLATFORM), alt is a valid app modifier
+		expect(
+			captureHotkeyFromEvent(ev({ code: "KeyA", key: "a", altKey: true })),
+		).toBe("alt+a");
+	});
+
 	it("returns null when event.code is undefined (synthetic / autofill events)", () => {
 		expect(
 			captureHotkeyFromEvent(ev({ code: undefined, ctrlKey: true })),
