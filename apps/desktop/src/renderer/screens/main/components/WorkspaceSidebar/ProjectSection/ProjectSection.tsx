@@ -228,7 +228,7 @@ export function ProjectSection({
 			<div
 				ref={projectHeaderRef}
 				className={cn(
-					"flex flex-col items-center py-2 border-b border-border last:border-b-0",
+					"flex flex-col items-center py-2 last:border-b-0",
 					isDragging && "opacity-30",
 					isDragging && "cursor-grabbing",
 				)}
@@ -330,7 +330,7 @@ export function ProjectSection({
 		<div
 			ref={projectHeaderRef}
 			className={cn(
-				"border-b border-border last:border-b-0",
+				"last:border-b-0",
 				isDragging && "opacity-30",
 				isDragging && "cursor-grabbing",
 			)}

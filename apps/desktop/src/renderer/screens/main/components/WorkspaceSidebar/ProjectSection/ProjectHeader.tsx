@@ -262,8 +262,8 @@ export function ProjectHeader({
 				<ContextMenuTrigger asChild>
 					<div
 						className={cn(
-							"flex items-center w-full pl-3 pr-2 py-1.5 text-sm font-medium",
-							"hover:bg-muted/50 transition-colors",
+							"flex items-center w-full pl-3 pr-2 py-0.5 text-sm font-medium",
+							"bg-muted/50 dark:bg-muted/40 hover:bg-muted/70 transition-colors",
 						)}
 					>
 						{rename.isRenaming ? (
