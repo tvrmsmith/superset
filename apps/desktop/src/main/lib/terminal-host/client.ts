@@ -9,6 +9,8 @@
  * - Event streaming
  */
 
+declare const __BUILD_ID__: string;
+
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
@@ -409,7 +411,11 @@ export class TerminalHostClient extends EventEmitter {
 							);
 						}
 						this.resetConnectionState({ emitDisconnected: false });
-						await this.shutdownLegacyDaemon();
+						try {
+							await this.shutdownLegacyDaemon();
+						} catch {
+							this.killDaemonFromPidFile();
+						}
 						await this.waitForDaemonShutdown();
 						await this.spawnDaemon();
 						continue;
@@ -767,7 +773,9 @@ export class TerminalHostClient extends EventEmitter {
 
 	private isProtocolMismatchError(error: unknown): boolean {
 		return (
-			error instanceof Error && error.message.startsWith("PROTOCOL_MISMATCH:")
+			error instanceof Error &&
+			(error.message.startsWith("PROTOCOL_MISMATCH:") ||
+				error.message.startsWith("BUILD_ID_MISMATCH:"))
 		);
 	}
 
@@ -781,6 +789,7 @@ export class TerminalHostClient extends EventEmitter {
 			protocolVersion: PROTOCOL_VERSION,
 			clientId: this.clientId,
 			role: "control",
+			buildId: typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : undefined,
 		});
 
 		if (response.protocolVersion !== PROTOCOL_VERSION) {
@@ -804,6 +813,7 @@ export class TerminalHostClient extends EventEmitter {
 				protocolVersion: PROTOCOL_VERSION,
 				clientId: this.clientId,
 				role: "stream",
+				buildId: typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : undefined,
 			},
 		});
 
@@ -942,17 +952,31 @@ export class TerminalHostClient extends EventEmitter {
 
 				(async () => {
 					try {
-						const helloId = `legacy_hello_${Date.now()}`;
-						const hello = await sendAndWait({
-							id: helloId,
+						// Try current protocol version first (handles build-ID mismatch
+						// where the stale daemon shares our protocol version).
+						// Fall back to v1 for truly legacy daemons.
+						let hello = await sendAndWait({
+							id: `legacy_hello_${Date.now()}`,
 							type: "hello",
 							payload: {
 								token,
-								protocolVersion: 1,
+								protocolVersion: PROTOCOL_VERSION,
 								clientId: this.clientId,
 								role: "control",
 							},
 						});
+						if (!hello.ok) {
+							hello = await sendAndWait({
+								id: `legacy_hello_v1_${Date.now()}`,
+								type: "hello",
+								payload: {
+									token,
+									protocolVersion: 1,
+									clientId: this.clientId,
+									role: "control",
+								},
+							});
+						}
 						if (!hello.ok) {
 							throw new Error(
 								`Legacy hello failed: ${hello.error.code}: ${hello.error.message}`,
@@ -1565,9 +1589,13 @@ export class TerminalHostClient extends EventEmitter {
 				} catch (error) {
 					if (this.isProtocolMismatchError(error)) {
 						this.resetConnectionState({ emitDisconnected: false });
-						await this.shutdownLegacyDaemon({
-							killSessions: request.killSessions ?? false,
-						});
+						try {
+							await this.shutdownLegacyDaemon({
+								killSessions: request.killSessions ?? false,
+							});
+						} catch {
+							this.killDaemonFromPidFile();
+						}
 						return { wasRunning: true };
 					}
 					throw error;

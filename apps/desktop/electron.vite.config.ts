@@ -48,6 +48,7 @@ export default defineConfig({
 		plugins: [tsconfigPaths, copyResourcesPlugin()],
 
 		define: {
+			__BUILD_ID__: JSON.stringify(Date.now().toString(36)),
 			"process.env.NODE_ENV": defineEnv(process.env.NODE_ENV, "production"),
 			"process.env.SKIP_ENV_VALIDATION": defineEnv(
 				process.env.SKIP_ENV_VALIDATION,

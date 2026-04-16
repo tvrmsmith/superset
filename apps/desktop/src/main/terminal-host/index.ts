@@ -12,6 +12,8 @@
  * - Auth token: ~/.superset/terminal-host.token
  */
 
+declare const __BUILD_ID__: string;
+
 import { randomBytes } from "node:crypto";
 import {
 	chmodSync,
@@ -244,6 +246,21 @@ const handlers: Record<string, RequestHandler> = {
 				id,
 				"PROTOCOL_MISMATCH",
 				`Protocol version mismatch. Expected ${PROTOCOL_VERSION}, got ${request.protocolVersion}`,
+			);
+			return;
+		}
+
+		// Validate build ID — reject clients from a different build (stale daemon)
+		if (
+			request.buildId &&
+			typeof __BUILD_ID__ === "string" &&
+			request.buildId !== __BUILD_ID__
+		) {
+			sendError(
+				socket,
+				id,
+				"BUILD_ID_MISMATCH",
+				`Build ID mismatch. Client=${request.buildId}, daemon=${__BUILD_ID__}`,
 			);
 			return;
 		}

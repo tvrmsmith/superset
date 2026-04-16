@@ -143,6 +143,8 @@ export interface HelloRequest {
 	clientId: string;
 	/** Socket role: control carries RPC; stream carries events */
 	role: "control" | "stream";
+	/** Compile-time build identifier — used to detect stale daemons after reinstall */
+	buildId?: string;
 }
 
 export interface HelloResponse {
