@@ -37,6 +37,7 @@ export interface DashboardSidebarWorkspace {
 	behindCount: number | null;
 	createdAt: Date;
 	updatedAt: Date;
+	lastActivityAt: Date | null;
 	creationStatus?: "preparing" | "generating-branch" | "creating" | "failed";
 }
 

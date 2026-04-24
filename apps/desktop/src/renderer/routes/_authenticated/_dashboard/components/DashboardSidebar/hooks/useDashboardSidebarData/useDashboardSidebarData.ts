@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { env } from "renderer/env.renderer";
 import { authClient } from "renderer/lib/auth-client";
+import { electronTrpc } from "renderer/lib/electron-trpc";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { useDashboardSidebarState } from "renderer/routes/_authenticated/hooks/useDashboardSidebarState";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
@@ -25,6 +26,8 @@ export function useDashboardSidebarData() {
 	const collections = useCollections();
 	const { machineId, activeHostUrl } = useLocalHostService();
 	const { toggleProjectCollapsed } = useDashboardSidebarState();
+	const { data: sidebarSortMode } =
+		electronTrpc.settings.getSidebarSortMode.useQuery();
 
 	// Query pending workspaces from the local collection
 	const { data: pendingWorkspaces = [] } = useLiveQuery(
@@ -128,6 +131,7 @@ export function useDashboardSidebarData() {
 					updatedAt: workspaces.updatedAt,
 					tabOrder: sidebarWorkspaces.sidebarState.tabOrder,
 					sectionId: sidebarWorkspaces.sidebarState.sectionId,
+					lastActivityAt: sidebarWorkspaces.lastActivityAt ?? null,
 				})),
 		[collections],
 	);
@@ -263,6 +267,7 @@ export function useDashboardSidebarData() {
 				behindCount: null,
 				createdAt: workspace.createdAt,
 				updatedAt: workspace.updatedAt,
+				lastActivityAt: workspace.lastActivityAt ?? null,
 			};
 
 			if (workspace.sectionId) {
@@ -311,6 +316,7 @@ export function useDashboardSidebarData() {
 				behindCount: null,
 				createdAt: new Date(),
 				updatedAt: new Date(),
+				lastActivityAt: null,
 				creationStatus: pw.status,
 			};
 
@@ -323,7 +329,7 @@ export function useDashboardSidebarData() {
 			});
 		}
 
-		return sidebarProjects.flatMap((project) => {
+		const sortedProjects = sidebarProjects.flatMap((project) => {
 			const resolvedProject = projectsById.get(project.id);
 			if (!resolvedProject) return [];
 			const {
@@ -332,9 +338,44 @@ export function useDashboardSidebarData() {
 				...sidebarProject
 			} = resolvedProject;
 
-			const sortedChildren = childEntries
-				.sort((left, right) => left.tabOrder - right.tabOrder)
-				.map(({ child }) => child);
+			let sortedChildren: DashboardSidebarProjectChild[];
+			if (sidebarSortMode === "recent") {
+				sortedChildren = childEntries
+					.sort((left, right) => {
+						const leftActivity =
+							left.child.type === "workspace"
+								? (left.child.workspace.lastActivityAt?.getTime() ?? null)
+								: null;
+						const rightActivity =
+							right.child.type === "workspace"
+								? (right.child.workspace.lastActivityAt?.getTime() ?? null)
+								: null;
+						if (leftActivity !== null && rightActivity !== null) {
+							return rightActivity - leftActivity;
+						}
+						if (leftActivity !== null) return -1;
+						if (rightActivity !== null) return 1;
+						return left.tabOrder - right.tabOrder;
+					})
+					.map(({ child }) => child);
+
+				for (const child of sortedChildren) {
+					if (child.type === "section") {
+						child.section.workspaces.sort((a, b) => {
+							const aTime = a.lastActivityAt?.getTime() ?? null;
+							const bTime = b.lastActivityAt?.getTime() ?? null;
+							if (aTime !== null && bTime !== null) return bTime - aTime;
+							if (aTime !== null) return -1;
+							if (bTime !== null) return 1;
+							return 0;
+						});
+					}
+				}
+			} else {
+				sortedChildren = childEntries
+					.sort((left, right) => left.tabOrder - right.tabOrder)
+					.map(({ child }) => child);
+			}
 
 			// Ungrouped workspaces rendered after a section header are visually
 			// grouped with that section (shared accent, collapse-together) and will
@@ -358,12 +399,46 @@ export function useDashboardSidebarData() {
 			sidebarProject.children = children;
 			return [sidebarProject];
 		});
+
+		if (sidebarSortMode === "recent") {
+			sortedProjects.sort((a, b) => {
+				const getMaxActivity = (
+					project: DashboardSidebarProject,
+				): number | null => {
+					let max: number | null = null;
+					for (const child of project.children) {
+						const time =
+							child.type === "workspace"
+								? (child.workspace.lastActivityAt?.getTime() ?? null)
+								: Math.max(
+										...child.section.workspaces
+											.map((w) => w.lastActivityAt?.getTime() ?? 0)
+											.filter((t) => t > 0),
+										0,
+									) || null;
+						if (time !== null) {
+							max = max === null ? time : Math.max(max, time);
+						}
+					}
+					return max;
+				};
+				const maxA = getMaxActivity(a);
+				const maxB = getMaxActivity(b);
+				if (maxA !== null && maxB !== null) return maxB - maxA;
+				if (maxA !== null) return -1;
+				if (maxB !== null) return 1;
+				return 0;
+			});
+		}
+
+		return sortedProjects;
 	}, [
 		machineId,
 		localPullRequestsByWorkspaceId,
 		pendingWorkspaces,
 		sidebarProjects,
 		sidebarSections,
+		sidebarSortMode,
 		sidebarWorkspaces,
 	]);
 
