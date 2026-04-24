@@ -27,6 +27,7 @@ export const SETTING_ITEM_ID = {
 	BEHAVIOR_RESOURCE_MONITOR: "behavior-resource-monitor",
 	BEHAVIOR_OPEN_LINKS_IN_APP: "behavior-open-links-in-app",
 	BEHAVIOR_SIDEBAR_SORT: "behavior-sidebar-sort",
+	BEHAVIOR_WORKSPACE_NUMBERS: "behavior-workspace-numbers",
 
 	GIT_BRANCH_PREFIX: "git-branch-prefix",
 	GIT_DELETE_LOCAL_BRANCH: "git-delete-local-branch",
@@ -510,6 +511,21 @@ export const SETTINGS_ITEMS: SettingsItem[] = [
 			"manual",
 			"drag",
 			"reorder",
+		],
+	},
+	{
+		id: SETTING_ITEM_ID.BEHAVIOR_WORKSPACE_NUMBERS,
+		section: "behavior",
+		title: "Show workspace numbers on modifier hold",
+		description:
+			"Display numbered badges on workspaces when holding the shortcut modifier key",
+		keywords: [
+			"workspace",
+			"number",
+			"badge",
+			"shortcut",
+			"modifier",
+			"keyboard",
 		],
 	},
 	{

@@ -238,6 +238,10 @@ export const settings = sqliteTable("settings", {
 		mode: "boolean",
 	}),
 	sidebarSortMode: text("sidebar_sort_mode").$type<SidebarSortMode>(),
+	showWorkspaceNumbersOnModifier: integer(
+		"show_workspace_numbers_on_modifier",
+		{ mode: "boolean" },
+	),
 });
 
 export type InsertSettings = typeof settings.$inferInsert;
