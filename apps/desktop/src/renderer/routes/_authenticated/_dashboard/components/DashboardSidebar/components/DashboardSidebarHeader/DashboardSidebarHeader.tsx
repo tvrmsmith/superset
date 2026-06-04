@@ -225,7 +225,7 @@ export function DashboardSidebarHeader({
 
 	return (
 		<div
-			className="flex flex-col gap-1 border-b border-border px-2 pt-2 pb-2"
+			className="flex flex-col gap-1 px-2 pt-2 pb-1"
 			// Pin the top inset so the traffic-light row stays a constant physical
 			// distance from the window top under page zoom (see the row below).
 			style={isMac ? { paddingTop: `${8 / zoomFactor}px` } : undefined}

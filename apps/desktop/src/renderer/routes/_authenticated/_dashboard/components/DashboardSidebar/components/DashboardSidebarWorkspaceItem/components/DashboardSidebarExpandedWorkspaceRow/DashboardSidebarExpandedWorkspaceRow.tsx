@@ -117,8 +117,8 @@ export const DashboardSidebarExpandedWorkspaceRow = forwardRef<
 				}}
 				className={cn(
 					"relative w-full text-left text-sm",
-					isActive && "bg-muted",
-					onClick && (isActive ? "hover:bg-muted" : "hover:bg-muted/50"),
+					isActive && "bg-primary/15",
+					onClick && (isActive ? "hover:bg-primary/20" : "hover:bg-muted/50"),
 					className,
 				)}
 				{...props}
