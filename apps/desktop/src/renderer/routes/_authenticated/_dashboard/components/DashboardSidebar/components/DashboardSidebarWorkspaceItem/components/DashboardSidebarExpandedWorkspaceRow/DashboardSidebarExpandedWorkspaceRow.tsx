@@ -144,7 +144,7 @@ export const DashboardSidebarExpandedWorkspaceRow = forwardRef<
 					}}
 					onDoubleClick={onDoubleClick}
 					className={cn(
-						"group relative flex w-full items-center py-2 pr-2",
+						"group relative flex w-full items-center py-1 pr-2",
 						isInSection ? "pl-7" : "pl-5",
 						onClick && "cursor-pointer",
 					)}

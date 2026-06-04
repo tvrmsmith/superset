@@ -69,7 +69,7 @@ export function DashboardSidebarProjectSection({
 				onRemoveFromSidebar={confirmRemoveFromSidebar}
 				onRename={startRename}
 			>
-				<div className={cn("border-b border-border last:border-b-0")}>
+				<div>
 					<DashboardSidebarCollapsedProjectContent
 						projectName={project.name}
 						iconUrl={project.iconUrl}

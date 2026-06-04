@@ -63,8 +63,8 @@ export const DashboardSidebarProjectRow = forwardRef<
 							}
 				}
 				className={cn(
-					"group flex min-h-10 w-full items-center pl-3 pr-2 py-1.5 text-sm font-medium",
-					"hover:bg-muted/50 transition-colors",
+					"group flex min-h-8 w-full items-center pl-3 pr-2 py-1 text-sm font-medium",
+					"bg-muted/60 hover:bg-muted/80 transition-colors",
 					className,
 				)}
 				{...props}
@@ -74,7 +74,7 @@ export const DashboardSidebarProjectRow = forwardRef<
 						<ProjectThumbnail
 							projectName={projectName}
 							iconUrl={iconUrl}
-							className="size-4 group-hover:hidden"
+							className="size-4 group-hover:hidden bg-background"
 						/>
 						<HiChevronRight
 							className={cn(
