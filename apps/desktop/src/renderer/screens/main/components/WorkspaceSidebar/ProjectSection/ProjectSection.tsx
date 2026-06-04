@@ -330,7 +330,6 @@ export function ProjectSection({
 		<div
 			ref={projectHeaderRef}
 			className={cn(
-				"border-b border-border last:border-b-0",
 				isDragging && "opacity-30",
 				isDragging && "cursor-grabbing",
 			)}

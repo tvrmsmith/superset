@@ -304,9 +304,11 @@ export function WorkspaceListItem({
 			className={cn(
 				"flex w-full pl-3 pr-2 text-sm",
 				"transition-colors text-left cursor-pointer",
+				// Zebra striping temporarily disabled — re-enable for alternating row contrast:
+				// index % 2 === 0 ? "bg-transparent" : "bg-foreground/[0.06]",
 				isActive ? "hover:bg-muted" : "hover:bg-muted/50",
 				"group relative",
-				showBranchSubtitle ? "py-1.5" : "py-2 items-center",
+				showBranchSubtitle ? "py-0.5" : "py-1 items-center",
 				isActive && "bg-muted",
 				isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/30",
 				(isDragging || isMultiDragging) && "opacity-30",

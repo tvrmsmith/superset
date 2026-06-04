@@ -262,8 +262,8 @@ export function ProjectHeader({
 				<ContextMenuTrigger asChild>
 					<div
 						className={cn(
-							"flex items-center w-full pl-3 pr-2 py-1.5 text-sm font-medium",
-							"hover:bg-muted/50 transition-colors",
+							"flex items-center w-full pl-3 pr-2 py-1 text-sm font-medium",
+							"bg-muted/60 hover:bg-muted/80 transition-colors",
 						)}
 					>
 						{rename.isRenaming ? (
@@ -298,6 +298,7 @@ export function ProjectHeader({
 									githubOwner={githubOwner}
 									hideImage={hideImage}
 									iconUrl={iconUrl}
+									className="bg-background"
 								/>
 								<span className="truncate">{projectName}</span>
 								<span className="text-xs text-muted-foreground tabular-nums font-normal">
