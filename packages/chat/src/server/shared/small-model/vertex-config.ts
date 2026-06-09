@@ -8,15 +8,11 @@ export interface VertexConfig {
 
 /**
  * Reads the persisted Advanced "Additional env vars" blob
- * (`chat-anthropic-env.json`). Returns an empty map on any failure — the
- * file is optional and a parse error must never break naming.
+ * (`chat-anthropic-env.json`). Returns an empty map when the file is absent
+ * or unparseable — config resolution must never throw.
  */
 function readPersistedEnv(): AnthropicEnvVariables {
-	try {
-		return getAnthropicEnvConfig().variables;
-	} catch {
-		return {};
-	}
+	return getAnthropicEnvConfig().variables;
 }
 
 /**

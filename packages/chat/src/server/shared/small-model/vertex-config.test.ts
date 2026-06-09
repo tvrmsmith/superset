@@ -100,4 +100,10 @@ describe("resolveVertexConfig", () => {
 		process.env.ANTHROPIC_VERTEX_PROJECT_ID = "my-proj";
 		expect(resolveVertexConfig()).toBeNull();
 	});
+
+	it("returns null when project ID is whitespace only", () => {
+		process.env.CLAUDE_CODE_USE_VERTEX = "1";
+		process.env.ANTHROPIC_VERTEX_PROJECT_ID = "   ";
+		expect(resolveVertexConfig()).toBeNull();
+	});
 });
