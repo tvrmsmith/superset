@@ -143,6 +143,13 @@ async function resolveOpenAIApiKey(): Promise<string | null> {
 	return null;
 }
 
+const VERTEX_AUTH_OPTIONS = {};
+let cachedVertex: { key: string; model: MastraModelConfig } | null = null;
+
+export function __resetVertexCacheForTests(): void {
+	cachedVertex = null;
+}
+
 /**
  * Resolves a Claude-on-Vertex small model when the user is configured for
  * Vertex (`CLAUDE_CODE_USE_VERTEX=1` + project). Returns `null` otherwise, so
@@ -156,11 +163,17 @@ export function resolveVertex(): MastraModelConfig | null {
 	const config = resolveVertexConfig();
 	if (!config) return null;
 
+	const key = `${config.project}|${config.location}`;
+	if (cachedVertex?.key === key) return cachedVertex.model;
+
 	try {
-		return createVertexAnthropic({
+		const model = createVertexAnthropic({
 			project: config.project,
 			location: config.location,
+			googleAuthOptions: VERTEX_AUTH_OPTIONS,
 		})(VERTEX_SMALL_MODEL_ID);
+		cachedVertex = { key, model };
+		return model;
 	} catch (error) {
 		console.warn("[get-small-model] vertex resolution failed:", error);
 		return null;

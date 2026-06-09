@@ -9,7 +9,7 @@ import { deduplicateBranchName } from "./sanitize-branch";
 
 const WORKSPACE_TITLE_MAX = 150;
 const BRANCH_NAME_MAX = 25;
-const GENERATE_TIMEOUT_MS = 5_000;
+const GENERATE_TIMEOUT_MS = 8_000;
 
 function sanitizeBranchCandidate(raw: string): string {
 	return raw

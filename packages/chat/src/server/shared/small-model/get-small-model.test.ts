@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 // leak across files and break it). Drive the real resolveVertexConfig via env.
 const VERTEX_MODEL_SENTINEL = { __vertexModel: true } as const;
 let vertexShouldThrow = false;
+let vertexBuildCount = 0;
 mock.module("@ai-sdk/google-vertex/anthropic", () => ({
 	createVertexAnthropic: () => {
+		vertexBuildCount++;
 		if (vertexShouldThrow) {
 			throw new Error("vertex init boom");
 		}
@@ -15,8 +17,13 @@ mock.module("@ai-sdk/google-vertex/anthropic", () => ({
 	},
 }));
 
-const { getSmallModel, isAnthropicApiKey, isOpenAIApiKey, resolveVertex } =
-	await import("./get-small-model");
+const {
+	getSmallModel,
+	isAnthropicApiKey,
+	isOpenAIApiKey,
+	resolveVertex,
+	__resetVertexCacheForTests,
+} = await import("./get-small-model");
 
 const VERTEX_ENV_KEYS = [
 	"CLAUDE_CODE_USE_VERTEX",
@@ -29,6 +36,8 @@ let savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
 	vertexShouldThrow = false;
+	vertexBuildCount = 0;
+	__resetVertexCacheForTests();
 	savedEnv = {};
 	for (const key of VERTEX_ENV_KEYS) {
 		savedEnv[key] = process.env[key];
@@ -68,6 +77,21 @@ describe("resolveVertex", () => {
 		enableVertex();
 		vertexShouldThrow = true;
 		expect(resolveVertex()).toBeNull();
+	});
+
+	it("memoizes the provider across calls (builds auth client once)", () => {
+		enableVertex();
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+		expect(vertexBuildCount).toBe(1);
+	});
+
+	it("rebuilds when project|location changes", () => {
+		enableVertex();
+		resolveVertex();
+		process.env.CLOUD_ML_REGION = "us-east5";
+		resolveVertex();
+		expect(vertexBuildCount).toBe(2);
 	});
 });
 

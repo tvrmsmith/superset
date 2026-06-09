@@ -6,7 +6,7 @@ const BRANCH_NAME_INSTRUCTIONS =
 	"Generate a concise git branch name (2-4 words, kebab-case, descriptive, 20 characters or less). Return ONLY the branch name, nothing else.";
 
 const MAX_BRANCH_LENGTH = 100;
-const GENERATE_TIMEOUT_MS = 5_000;
+const GENERATE_TIMEOUT_MS = 8_000;
 
 /**
  * Light sanitizer for AI-generated branch names — lowercase, kebab-case,
