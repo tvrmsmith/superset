@@ -1,12 +1,9 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
-
-// Controls what the Vertex config resolver returns per test.
-let vertexConfig: { project: string; location: string } | null = null;
-mock.module("./vertex-config", () => ({
-	resolveVertexConfig: () => vertexConfig,
-}));
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Sentinel model + a createVertexAnthropic that can be told to throw.
+// Mock ONLY the provider — do NOT mock ./vertex-config (that module is the
+// subject of vertex-config.test.ts, and a process-global module mock would
+// leak across files and break it). Drive the real resolveVertexConfig via env.
 const VERTEX_MODEL_SENTINEL = { __vertexModel: true } as const;
 let vertexShouldThrow = false;
 mock.module("@ai-sdk/google-vertex/anthropic", () => ({
@@ -21,24 +18,54 @@ mock.module("@ai-sdk/google-vertex/anthropic", () => ({
 const { getSmallModel, isAnthropicApiKey, isOpenAIApiKey, resolveVertex } =
 	await import("./get-small-model");
 
-afterEach(() => {
-	vertexConfig = null;
+const VERTEX_ENV_KEYS = [
+	"CLAUDE_CODE_USE_VERTEX",
+	"ANTHROPIC_VERTEX_PROJECT_ID",
+	"CLOUD_ML_REGION",
+	"SUPERSET_HOME_DIR",
+] as const;
+
+let savedEnv: Record<string, string | undefined> = {};
+
+beforeEach(() => {
 	vertexShouldThrow = false;
+	savedEnv = {};
+	for (const key of VERTEX_ENV_KEYS) {
+		savedEnv[key] = process.env[key];
+		delete process.env[key];
+	}
+	// Point the persisted-blob reader at a dir with no chat-anthropic-env.json
+	// so the file fallback never interferes with these env-driven tests.
+	process.env.SUPERSET_HOME_DIR = "/nonexistent-superset-test-home-dir";
 });
+
+afterEach(() => {
+	for (const key of VERTEX_ENV_KEYS) {
+		if (savedEnv[key] === undefined) {
+			delete process.env[key];
+		} else {
+			process.env[key] = savedEnv[key];
+		}
+	}
+});
+
+function enableVertex() {
+	process.env.CLAUDE_CODE_USE_VERTEX = "1";
+	process.env.ANTHROPIC_VERTEX_PROJECT_ID = "p";
+}
 
 describe("resolveVertex", () => {
 	it("returns null when no Vertex config is resolved", () => {
-		vertexConfig = null;
 		expect(resolveVertex()).toBeNull();
 	});
 
 	it("returns a model when Vertex config is present", () => {
-		vertexConfig = { project: "p", location: "global" };
+		enableVertex();
 		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
 	});
 
 	it("returns null (does not throw) when provider init fails", () => {
-		vertexConfig = { project: "p", location: "global" };
+		enableVertex();
 		vertexShouldThrow = true;
 		expect(resolveVertex()).toBeNull();
 	});
@@ -46,7 +73,7 @@ describe("resolveVertex", () => {
 
 describe("getSmallModel — Vertex precedence", () => {
 	it("returns the Vertex model first when Vertex is enabled", async () => {
-		vertexConfig = { project: "p", location: "global" };
+		enableVertex();
 		expect(await getSmallModel()).toBe(VERTEX_MODEL_SENTINEL);
 	});
 });
