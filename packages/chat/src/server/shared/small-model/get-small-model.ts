@@ -1,4 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createVertexAnthropic } from "@ai-sdk/google-vertex/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { MastraModelConfig } from "@mastra/core/llm";
 import { createAuthStorage } from "mastracode";
@@ -6,9 +7,12 @@ import {
 	ANTHROPIC_AUTH_PROVIDER_ID,
 	OPENAI_AUTH_PROVIDER_IDS,
 } from "../auth-provider-ids";
+import { resolveVertexConfig } from "./vertex-config";
 
 const ANTHROPIC_SMALL_MODEL_ID = "claude-haiku-4-5-20251001";
 const OPENAI_SMALL_MODEL_ID = "gpt-4o-mini";
+// Vertex uses the `@`-date model id form, vs the Anthropic API `-date` form.
+const VERTEX_SMALL_MODEL_ID = "claude-haiku-4-5@20251001";
 
 const MIN_API_KEY_LENGTH = 30;
 
@@ -140,21 +144,49 @@ async function resolveOpenAIApiKey(): Promise<string | null> {
 }
 
 /**
+ * Resolves a Claude-on-Vertex small model when the user is configured for
+ * Vertex (`CLAUDE_CODE_USE_VERTEX=1` + project). Returns `null` otherwise, so
+ * behavior with the flag unset is identical to before. Auth uses Application
+ * Default Credentials, auto-discovered by google-auth-library — no key passed.
+ *
+ * A misconfigured Vertex must not break naming: any init throw is logged and
+ * we fall through to the Anthropic/OpenAI resolvers.
+ */
+export function resolveVertex(): MastraModelConfig | null {
+	const config = resolveVertexConfig();
+	if (!config) return null;
+
+	try {
+		return createVertexAnthropic({
+			project: config.project,
+			location: config.location,
+		})(VERTEX_SMALL_MODEL_ID);
+	} catch (error) {
+		console.warn("[get-small-model] vertex resolution failed:", error);
+		return null;
+	}
+}
+
+/**
  * Returns an AI-SDK `LanguageModel` for small-model tasks (branch naming,
  * title generation). Returns `null` if no usable credentials are available.
  *
  * Resolution order:
- *   1. ANTHROPIC_API_KEY env var (validated)
- *   2. mastracode auth storage — Anthropic api key
- *   3. mastracode auth storage — Anthropic OAuth (refreshed on the fly)
- *   4. OPENAI_API_KEY env var (validated)
- *   5. mastracode auth storage — OpenAI api key (`openai-codex` / `openai`)
+ *   1. Vertex AI (Claude on Vertex) — when CLAUDE_CODE_USE_VERTEX=1 + project
+ *   2. ANTHROPIC_API_KEY env var (validated)
+ *   3. mastracode auth storage — Anthropic api key
+ *   4. mastracode auth storage — Anthropic OAuth (refreshed on the fly)
+ *   5. OPENAI_API_KEY env var (validated)
+ *   6. mastracode auth storage — OpenAI api key (`openai-codex` / `openai`)
  *
  * API keys are validated by prefix + minimum length so dev placeholders
  * (e.g. `ANTHROPIC_API_KEY=dummy` from a sample .env) fall through to the
  * next path instead of being sent to the API and failing 401.
  */
 export async function getSmallModel(): Promise<MastraModelConfig | null> {
+	const vertex = resolveVertex();
+	if (vertex) return vertex;
+
 	const anthropic = await resolveAnthropic();
 	if (anthropic?.kind === "apiKey") {
 		return createAnthropic({ apiKey: anthropic.key })(ANTHROPIC_SMALL_MODEL_ID);

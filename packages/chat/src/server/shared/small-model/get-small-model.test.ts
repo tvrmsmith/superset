@@ -1,5 +1,55 @@
-import { describe, expect, it } from "bun:test";
-import { isAnthropicApiKey, isOpenAIApiKey } from "./get-small-model";
+import { afterEach, describe, expect, it, mock } from "bun:test";
+
+// Controls what the Vertex config resolver returns per test.
+let vertexConfig: { project: string; location: string } | null = null;
+mock.module("./vertex-config", () => ({
+	resolveVertexConfig: () => vertexConfig,
+}));
+
+// Sentinel model + a createVertexAnthropic that can be told to throw.
+const VERTEX_MODEL_SENTINEL = { __vertexModel: true } as const;
+let vertexShouldThrow = false;
+mock.module("@ai-sdk/google-vertex/anthropic", () => ({
+	createVertexAnthropic: () => {
+		if (vertexShouldThrow) {
+			throw new Error("vertex init boom");
+		}
+		return () => VERTEX_MODEL_SENTINEL;
+	},
+}));
+
+const { getSmallModel, isAnthropicApiKey, isOpenAIApiKey, resolveVertex } =
+	await import("./get-small-model");
+
+afterEach(() => {
+	vertexConfig = null;
+	vertexShouldThrow = false;
+});
+
+describe("resolveVertex", () => {
+	it("returns null when no Vertex config is resolved", () => {
+		vertexConfig = null;
+		expect(resolveVertex()).toBeNull();
+	});
+
+	it("returns a model when Vertex config is present", () => {
+		vertexConfig = { project: "p", location: "global" };
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+	});
+
+	it("returns null (does not throw) when provider init fails", () => {
+		vertexConfig = { project: "p", location: "global" };
+		vertexShouldThrow = true;
+		expect(resolveVertex()).toBeNull();
+	});
+});
+
+describe("getSmallModel — Vertex precedence", () => {
+	it("returns the Vertex model first when Vertex is enabled", async () => {
+		vertexConfig = { project: "p", location: "global" };
+		expect(await getSmallModel()).toBe(VERTEX_MODEL_SENTINEL);
+	});
+});
 
 describe("isAnthropicApiKey", () => {
 	it("accepts a real-shaped key", () => {
