@@ -117,8 +117,8 @@ export const DashboardSidebarExpandedWorkspaceRow = forwardRef<
 				}}
 				className={cn(
 					"relative w-full text-left text-sm",
-					isActive && "bg-muted",
-					onClick && (isActive ? "hover:bg-muted" : "hover:bg-muted/50"),
+					isActive && "bg-primary/15",
+					onClick && (isActive ? "hover:bg-primary/20" : "hover:bg-muted/50"),
 					className,
 				)}
 				{...props}
@@ -144,7 +144,7 @@ export const DashboardSidebarExpandedWorkspaceRow = forwardRef<
 					}}
 					onDoubleClick={onDoubleClick}
 					className={cn(
-						"group relative flex w-full items-center py-2 pr-2",
+						"group relative flex w-full items-center py-1 pr-2",
 						isInSection ? "pl-7" : "pl-5",
 						onClick && "cursor-pointer",
 					)}
