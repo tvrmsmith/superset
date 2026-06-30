@@ -1,5 +1,106 @@
-import { describe, expect, it } from "bun:test";
-import { isAnthropicApiKey, isOpenAIApiKey } from "./get-small-model";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
+// Sentinel model + a createVertexAnthropic that can be told to throw.
+// Mock ONLY the provider — do NOT mock ./vertex-config (that module is the
+// subject of vertex-config.test.ts, and a process-global module mock would
+// leak across files and break it). Drive the real resolveVertexConfig via env.
+const VERTEX_MODEL_SENTINEL = { __vertexModel: true } as const;
+let vertexShouldThrow = false;
+let vertexBuildCount = 0;
+mock.module("@ai-sdk/google-vertex/anthropic", () => ({
+	createVertexAnthropic: () => {
+		vertexBuildCount++;
+		if (vertexShouldThrow) {
+			throw new Error("vertex init boom");
+		}
+		return () => VERTEX_MODEL_SENTINEL;
+	},
+}));
+
+const {
+	getSmallModel,
+	isAnthropicApiKey,
+	isOpenAIApiKey,
+	resolveVertex,
+	__resetVertexCacheForTests,
+} = await import("./get-small-model");
+
+const VERTEX_ENV_KEYS = [
+	"CLAUDE_CODE_USE_VERTEX",
+	"ANTHROPIC_VERTEX_PROJECT_ID",
+	"CLOUD_ML_REGION",
+	"SUPERSET_HOME_DIR",
+] as const;
+
+let savedEnv: Record<string, string | undefined> = {};
+
+beforeEach(() => {
+	vertexShouldThrow = false;
+	vertexBuildCount = 0;
+	__resetVertexCacheForTests();
+	savedEnv = {};
+	for (const key of VERTEX_ENV_KEYS) {
+		savedEnv[key] = process.env[key];
+		delete process.env[key];
+	}
+	// Point the persisted-blob reader at a dir with no chat-anthropic-env.json
+	// so the file fallback never interferes with these env-driven tests.
+	process.env.SUPERSET_HOME_DIR = "/nonexistent-superset-test-home-dir";
+});
+
+afterEach(() => {
+	for (const key of VERTEX_ENV_KEYS) {
+		if (savedEnv[key] === undefined) {
+			delete process.env[key];
+		} else {
+			process.env[key] = savedEnv[key];
+		}
+	}
+});
+
+function enableVertex() {
+	process.env.CLAUDE_CODE_USE_VERTEX = "1";
+	process.env.ANTHROPIC_VERTEX_PROJECT_ID = "p";
+}
+
+describe("resolveVertex", () => {
+	it("returns null when no Vertex config is resolved", () => {
+		expect(resolveVertex()).toBeNull();
+	});
+
+	it("returns a model when Vertex config is present", () => {
+		enableVertex();
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+	});
+
+	it("returns null (does not throw) when provider init fails", () => {
+		enableVertex();
+		vertexShouldThrow = true;
+		expect(resolveVertex()).toBeNull();
+	});
+
+	it("memoizes the provider across calls (builds auth client once)", () => {
+		enableVertex();
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+		expect(resolveVertex()).toBe(VERTEX_MODEL_SENTINEL);
+		expect(vertexBuildCount).toBe(1);
+	});
+
+	it("rebuilds when project|location changes", () => {
+		enableVertex();
+		resolveVertex();
+		process.env.CLOUD_ML_REGION = "us-east5";
+		resolveVertex();
+		expect(vertexBuildCount).toBe(2);
+	});
+});
+
+describe("getSmallModel — Vertex precedence", () => {
+	it("returns the Vertex model first when Vertex is enabled", async () => {
+		enableVertex();
+		expect(await getSmallModel()).toBe(VERTEX_MODEL_SENTINEL);
+	});
+});
 
 describe("isAnthropicApiKey", () => {
 	it("accepts a real-shaped key", () => {

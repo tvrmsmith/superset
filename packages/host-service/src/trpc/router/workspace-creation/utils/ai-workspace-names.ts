@@ -7,9 +7,10 @@ import type { HostServiceContext } from "../../../../types";
 import { listBranchNames } from "./list-branch-names";
 import { deduplicateBranchName } from "./sanitize-branch";
 
-const WORKSPACE_TITLE_MAX = 150;
+const WORKSPACE_TITLE_TARGET = 40;
+const WORKSPACE_TITLE_MAX = 50;
 const BRANCH_NAME_MAX = 25;
-const GENERATE_TIMEOUT_MS = 5_000;
+const GENERATE_TIMEOUT_MS = 8_000;
 
 function sanitizeBranchCandidate(raw: string): string {
 	return raw
@@ -24,10 +25,12 @@ function sanitizeBranchCandidate(raw: string): string {
 }
 
 function trimTitle(raw: string): string {
-	return raw
-		.trim()
-		.replace(/[\s.,;:!?-]+$/g, "")
-		.slice(0, WORKSPACE_TITLE_MAX);
+	const cleaned = raw.trim().replace(/[\s.,;:!?-]+$/g, "");
+	if (cleaned.length <= WORKSPACE_TITLE_MAX) return cleaned;
+	const hard = cleaned.slice(0, WORKSPACE_TITLE_MAX);
+	const lastSpace = hard.lastIndexOf(" ");
+	const trimmed = lastSpace > 0 ? hard.slice(0, lastSpace) : hard;
+	return trimmed.replace(/[\s.,;:!?-]+$/g, "");
 }
 
 // Forgiving transforms: coerce anything the model sends into shape
@@ -40,7 +43,7 @@ const workspaceNamesSchema = z.object({
 		.string()
 		.transform(trimTitle)
 		.describe(
-			`Short human-readable workspace title. Up to ${WORKSPACE_TITLE_MAX} characters. No trailing punctuation. Prefer whole words; never truncate mid-word.`,
+			`Short human-readable workspace title. 2-4 words, up to ${WORKSPACE_TITLE_TARGET} characters. No trailing punctuation. Prefer whole words; never truncate mid-word.`,
 		),
 	branchName: z
 		.string()
@@ -55,7 +58,7 @@ export type GeneratedWorkspaceNames = z.infer<typeof workspaceNamesSchema>;
 const INSTRUCTIONS = [
 	"You name new code workspaces from the user's initial prompt.",
 	"Return a structured object with two fields:",
-	`- title: a short human-readable label (<= ${WORKSPACE_TITLE_MAX} chars). Full words only; never cut mid-word. No trailing punctuation.`,
+	`- title: a short human-readable label (2-4 words, <= ${WORKSPACE_TITLE_TARGET} chars). Full words only; never cut mid-word. No trailing punctuation.`,
 	`- branchName: a kebab-case git branch name (<= ${BRANCH_NAME_MAX} chars, 2-4 words). Only a-z 0-9 and dashes. No prefixes.`,
 	"Both fields must describe the same underlying task; the branch is just a compact slug of the title.",
 ].join("\n");
